@@ -16,9 +16,7 @@ CHAT_IDS = os.getenv("CHAT_IDS", "").split(",")
 GIF_URL = os.getenv("GIF_URL")
 WSOL_MINT = "So11111111111111111111111111111111111111112"
 
-SOFTCAP_SOL = 72.9
-SOFTCAP_USD = 11700
-
+SOFTCAP_SOL = 50  # actualizat
 bot = Bot(token=TELEGRAM_TOKEN)
 last_sig = None
 initial_run = True
@@ -35,11 +33,23 @@ async def get_sol_price():
 async def get_wallet_balance():
     try:
         client = AsyncClient(SOLANA_RPC)
-        resp = await client.get_balance(Pubkey.from_string(MONITORED_WALLET))
-        sol = resp.value / 1e9
+        wallet = Pubkey.from_string(MONITORED_WALLET)
+
+        resp = await client.get_token_accounts_by_owner(
+            wallet,
+            mint=Pubkey.from_string(WSOL_MINT),
+            encoding="jsonParsed"
+        )
+
+        sol_total = 0.0
+        for token_acc in resp.value:
+            amount = token_acc.account.data.parsed["info"]["tokenAmount"]["uiAmount"]
+            sol_total += amount
+
         await client.close()
-        return sol
-    except:
+        return sol_total
+    except Exception as e:
+        print(f"⚠️ Error getting WSOL balance: {e}")
         return 0.0
 
 def generate_bullets(sol_amount):
@@ -147,7 +157,12 @@ async def check_transactions():
                     wallet_usd = wallet_balance * sol_price
 
                     emoji = "💸" if usd_value < 10 else "🚀" if usd_value < 100 else "🔥"
-                    softcap_status = f"🔴 *SoftCap:* {SOFTCAP_SOL} SOL (~${SOFTCAP_USD:,.0f})"
+
+                    progress_pct = min(wallet_balance / SOFTCAP_SOL * 100, 100)
+                    filled = int(progress_pct // 5)
+                    progress_bar = f"[{'█' * filled}{'░' * (20 - filled)}] {progress_pct:.1f}%"
+
+                    softcap_status = f"🔴 *SoftCap:* {SOFTCAP_SOL} SOL"
                     if wallet_balance >= SOFTCAP_SOL:
                         softcap_status += "\n🥳 ✅ *SoftCap Passed!*"
 
@@ -164,7 +179,8 @@ async def check_transactions():
                         f"┌────────────────────────────┐\n"
                         f"│  {wallet_balance:.4f} SOL (~${wallet_usd:,.2f})  │\n"
                         f"└────────────────────────────┘\n\n"
-                        f"{softcap_status}\n\n"
+                        f"{softcap_status}\n"
+                        f"📊 *Progress:*\n{progress_bar}\n\n"
                         f"🔗 [View on Solscan](https://solscan.io/tx/{sig})\n\n"
                         f"───────────────\n"
                         f"🤖 *BuyDetector™ Solana*\n"
