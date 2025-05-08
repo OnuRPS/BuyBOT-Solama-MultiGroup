@@ -15,8 +15,8 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_IDS = os.getenv("CHAT_IDS", "").split(",")
 GIF_URL = os.getenv("GIF_URL")
 WSOL_MINT = "So11111111111111111111111111111111111111112"
-SOFTCAP_SOL = 50
 
+SOFTCAP_SOL = 50  # actualizat
 bot = Bot(token=TELEGRAM_TOKEN)
 last_sig = None
 initial_run = True
@@ -122,6 +122,32 @@ async def check_transactions():
                                     break
                     if sol_amount > 0:
                         break
+
+                if sol_amount == 0:
+                    for instr in instructions:
+                        if instr.get("program") == "system":
+                            parsed = instr.get("parsed", {})
+                            if parsed.get("type") == "transfer":
+                                info = parsed.get("info", {})
+                                if info.get("destination") == MONITORED_WALLET:
+                                    lamports = int(info.get("lamports", 0))
+                                    sol_amount = lamports / 1e9
+                                    from_addr = info.get("source", "Unknown")
+                                    to_addr = info.get("destination", MONITORED_WALLET)
+                                    print(f"✅ SOL transfer detected: {sol_amount} SOL")
+                                    break
+
+                if sol_amount == 0:
+                    for b in meta.get("postTokenBalances", []):
+                        if b.get("owner") == MONITORED_WALLET and b.get("mint") == WSOL_MINT:
+                            pre_amt = next((x for x in meta.get("preTokenBalances", []) if x.get("accountIndex") == b.get("accountIndex")), {})
+                            old_val = float(pre_amt.get("uiTokenAmount", {}).get("uiAmount", 0))
+                            new_val = float(b.get("uiTokenAmount", {}).get("uiAmount", 0))
+                            diff = new_val - old_val
+                            if diff > 0:
+                                sol_amount = diff
+                                print(f"✅ WSOL delta detected: {sol_amount} SOL")
+                                break
 
                 if sol_amount > 0:
                     sol_price = await get_sol_price()
