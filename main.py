@@ -36,10 +36,10 @@ async def get_wallet_balance():
         wallet = Pubkey.from_string(MONITORED_WALLET)
 
         resp = await client.get_token_accounts_by_owner(
-            wallet,
-            program_id=Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
-            encoding="jsonParsed"
-        )
+          wallet,
+          Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+          encoding="jsonParsed"
+          )
 
         sol_total = 0.0
         for token_acc in resp.value:
