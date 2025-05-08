@@ -10,13 +10,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SOLANA_RPC = "https://rpc.helius.xyz/?api-key=4db5289f-5c8e-4e55-8478-dd1e73ee2eee"
-MONITORED_WALLET = "Gdor8k1ubPEp5UyPm5Y1WnEfSqbHD7mXQgZYswTTUQUw"
+MONITORED_WALLET = "D6FDaJjvRwBSm54rBP7ViRbF7KQxzpNw35TFWNWwpsbB"
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_IDS = os.getenv("CHAT_IDS", "").split(",")
 GIF_URL = os.getenv("GIF_URL")
 WSOL_MINT = "So11111111111111111111111111111111111111112"
-SOFTCAP_SOL = 50
 
+SOFTCAP_SOL = 50  # actualizat
 bot = Bot(token=TELEGRAM_TOKEN)
 last_sig = None
 initial_run = True
@@ -31,25 +31,7 @@ async def get_sol_price():
         return 0.0
 
 async def get_wallet_balance():
-    try:
-        client = AsyncClient(SOLANA_RPC)
-        wallet = Pubkey.from_string(MONITORED_WALLET)
-        program_id = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-
-        resp = await client.get_token_accounts_by_owner(wallet, program_id)
-
-        sol_total = 0.0
-        for token_acc in resp.value:
-            info = token_acc.account.data.parsed["info"]
-            if info["mint"] == WSOL_MINT:
-                amount = float(info["tokenAmount"]["amount"]) / 1e9
-                sol_total += amount
-
-        await client.close()
-        return sol_total
-    except Exception as e:
-        print(f"⚠️ Error getting WSOL balance: {e}")
-        return 0.0
+    return 0.0  # disabled because we removed the raised section
 
 def generate_bullets(sol_amount):
     bullets_count = int(sol_amount / 0.1)
@@ -123,6 +105,20 @@ async def check_transactions():
                         break
 
                 if sol_amount == 0:
+                    for instr in instructions:
+                        if instr.get("program") == "system":
+                            parsed = instr.get("parsed", {})
+                            if parsed.get("type") == "transfer":
+                                info = parsed.get("info", {})
+                                if info.get("destination") == MONITORED_WALLET:
+                                    lamports = int(info.get("lamports", 0))
+                                    sol_amount = lamports / 1e9
+                                    from_addr = info.get("source", "Unknown")
+                                    to_addr = info.get("destination", MONITORED_WALLET)
+                                    print(f"✅ SOL transfer detected: {sol_amount} SOL")
+                                    break
+
+                if sol_amount == 0:
                     for b in meta.get("postTokenBalances", []):
                         if b.get("owner") == MONITORED_WALLET and b.get("mint") == WSOL_MINT:
                             pre_amt = next((x for x in meta.get("preTokenBalances", []) if x.get("accountIndex") == b.get("accountIndex")), {})
@@ -138,18 +134,9 @@ async def check_transactions():
                     sol_price = await get_sol_price()
                     usd_value = sol_amount * sol_price
                     bullets = generate_bullets(sol_amount)
-                    wallet_balance = await get_wallet_balance()
-                    wallet_usd = wallet_balance * sol_price
 
                     emoji = "💸" if usd_value < 10 else "🚀" if usd_value < 100 else "🔥"
-
-                    progress_pct = min(wallet_balance / SOFTCAP_SOL * 100, 100)
-                    filled = int(progress_pct // 5)
-                    progress_bar = f"[{'█' * filled}{'░' * (20 - filled)}] {progress_pct:.1f}%"
-
-                    softcap_status = f"🔴 *SoftCap:* {SOFTCAP_SOL} SOL"
-                    if wallet_balance >= SOFTCAP_SOL:
-                        softcap_status += "\n🥳 ✅ *SoftCap Passed!*"
+                    progress_bar = ""
 
                     msg_text = (
                         f"{emoji} *New $BabyGOV contribution detected!*\n\n"
@@ -160,12 +147,6 @@ async def check_transactions():
                         f"│  {sol_amount:.4f} SOL (~${usd_value:,.2f})  │\n"
                         f"└────────────────────────────┘\n"
                         f"{bullets}\n\n"
-                        f"💼 *Raised:*\n"
-                        f"┌────────────────────────────┐\n"
-                        f"│  {wallet_balance:.4f} SOL (~${wallet_usd:,.2f})  │\n"
-                        f"└────────────────────────────┘\n\n"
-                        f"{softcap_status}\n"
-                        f"📊 *Progress:*\n{progress_bar}\n\n"
                         f"🔗 [View on Solscan](https://solscan.io/tx/{sig})\n\n"
                         f"───────────────\n"
                         f"🤖 *BuyDetector™ Solana*\n"
