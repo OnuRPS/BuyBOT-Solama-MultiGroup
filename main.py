@@ -6,7 +6,6 @@ from telegram import Bot
 from solana.rpc.async_api import AsyncClient
 from solders.pubkey import Pubkey
 from dotenv import load_dotenv
-from solana.rpc.types import TokenAccountsFilter
 
 load_dotenv()
 
@@ -16,8 +15,8 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_IDS = os.getenv("CHAT_IDS", "").split(",")
 GIF_URL = os.getenv("GIF_URL")
 WSOL_MINT = "So11111111111111111111111111111111111111112"
+SOFTCAP_SOL = 50
 
-SOFTCAP_SOL = 50  # actualizat
 bot = Bot(token=TELEGRAM_TOKEN)
 last_sig = None
 initial_run = True
@@ -37,20 +36,23 @@ async def get_wallet_balance():
         wallet = Pubkey.from_string(MONITORED_WALLET)
 
         resp = await client.get_token_accounts_by_owner(
-    wallet,
-    TokenAccountsFilter(mint=Pubkey.from_string(WSOL_MINT)),
-    encoding="jsonParsed"
-    )
+            wallet,
+            program_id=Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+            encoding="jsonParsed"
+        )
 
         sol_total = 0.0
         for token_acc in resp.value:
-            amount = float(token_acc.account.data.parsed['info']['tokenAmount']['amount']) / 1e9
-            sol_total += amount
+            info = token_acc.account.data.parsed["info"]
+            mint = info["mint"]
+            if mint == WSOL_MINT:
+                amount = float(info["tokenAmount"]["amount"]) / 1e9
+                sol_total += amount
 
         await client.close()
         return sol_total
     except Exception as e:
-        print(f"⚠️ Error getting WSOL balance: {e}")
+        print(f"\u26a0\ufe0f Error getting WSOL balance (manual fallback): {e}")
         return 0.0
 
 def generate_bullets(sol_amount):
@@ -123,20 +125,6 @@ async def check_transactions():
                                     break
                     if sol_amount > 0:
                         break
-
-                if sol_amount == 0:
-                    for instr in instructions:
-                        if instr.get("program") == "system":
-                            parsed = instr.get("parsed", {})
-                            if parsed.get("type") == "transfer":
-                                info = parsed.get("info", {})
-                                if info.get("destination") == MONITORED_WALLET:
-                                    lamports = int(info.get("lamports", 0))
-                                    sol_amount = lamports / 1e9
-                                    from_addr = info.get("source", "Unknown")
-                                    to_addr = info.get("destination", MONITORED_WALLET)
-                                    print(f"✅ SOL transfer detected: {sol_amount} SOL")
-                                    break
 
                 if sol_amount == 0:
                     for b in meta.get("postTokenBalances", []):
