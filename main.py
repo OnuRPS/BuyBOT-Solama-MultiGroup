@@ -12,7 +12,7 @@ load_dotenv()
 SOLANA_RPC = "https://rpc.helius.xyz/?api-key=4db5289f-5c8e-4e55-8478-dd1e73ee2eee"
 MONITORED_WALLET = "D6FDaJjvRwBSm54rBP7ViRbF7KQxzpNw35TFWNWwpsbB"
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_IDS = os.getenv("CHAT_IDS", "").split(",")  # e.g., "123456789,-987654321"
+CHAT_IDS = os.getenv("CHAT_IDS", "").split(",")
 GIF_URL = os.getenv("GIF_URL")
 WSOL_MINT = "So11111111111111111111111111111111111111112"
 
@@ -78,14 +78,12 @@ async def check_transactions():
                 msg = transaction.get("message", {})
                 instructions = msg.get("instructions", [])
                 inner = tx_json.get("meta", {}).get("innerInstructions", [])
-                accs = msg.get("accountKeys", [])
                 meta = tx_json.get("meta", {})
 
                 sol_amount = 0
                 from_addr = "Unknown"
                 to_addr = MONITORED_WALLET
 
-                # WSOL transfer (instructions + innerInstructions)
                 for instr_list in [instructions] + [x.get("instructions", []) for x in inner if isinstance(x, dict)]:
                     for instr in instr_list:
                         if instr.get("program") == "spl-token":
@@ -102,7 +100,6 @@ async def check_transactions():
                     if sol_amount > 0:
                         break
 
-                # SOL transfer
                 if sol_amount == 0:
                     for instr in instructions:
                         if instr.get("program") == "system":
@@ -117,7 +114,6 @@ async def check_transactions():
                                     print(f"✅ SOL transfer detected: {sol_amount} SOL")
                                     break
 
-                # WSOL delta in postTokenBalances
                 if sol_amount == 0:
                     for b in meta.get("postTokenBalances", []):
                         if b.get("owner") == MONITORED_WALLET and b.get("mint") == WSOL_MINT:
@@ -137,8 +133,8 @@ async def check_transactions():
 
                     msg_text = (
                         f"🪙 *New $BabyGOV contribution detected!*\n\n"
-                        f"🔁 From: `{from_addr}`\n"
-                        f"📥 To: `{to_addr}`\n"
+                        f"🔁 *From:* `{from_addr}`\n"
+                        f"📥 *To:* `{to_addr}`\n"
                         f"🟨 *Amount:*\n"
                         f"┌────────────────────────────┐\n"
                         f"│  {sol_amount:.4f} SOL (~${usd_value:,.2f})  │\n"
@@ -146,8 +142,8 @@ async def check_transactions():
                         f"{bullets}\n\n"
                         f"🔗 [View on Solscan](https://solscan.io/tx/{sig})\n\n"
                         f"───────────────\n"
-                        f"🤖 𝓑𝓾𝔂𝓓𝓮𝓽𝓮𝓬𝓽𝓸𝓻™ Solana\n"
-                        f"🔧 by ReactLAB"
+                        f"🤖 *BuyDetector™ Solana*\n"
+                        f"🔧 by [ReactLAB](https://t.me/PandaBaoOfficial)"
                     )
 
                     send_telegram_message(msg_text, gif_url=GIF_URL)
