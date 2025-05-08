@@ -34,25 +34,20 @@ async def get_wallet_balance():
     try:
         client = AsyncClient(SOLANA_RPC)
         wallet = Pubkey.from_string(MONITORED_WALLET)
-
         resp = await client.get_token_accounts_by_owner(
             wallet,
             Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-           )
-
-
+        )
         sol_total = 0.0
         for token_acc in resp.value:
             info = token_acc.account.data.parsed["info"]
-            mint = info["mint"]
-            if mint == WSOL_MINT:
+            if info["mint"] == WSOL_MINT:
                 amount = float(info["tokenAmount"]["amount"]) / 1e9
                 sol_total += amount
-
         await client.close()
         return sol_total
     except Exception as e:
-        print(f"\u26a0\ufe0f Error getting WSOL balance (manual fallback): {e}")
+        print(f"⚠️ Error getting WSOL balance: {e}")
         return 0.0
 
 def generate_bullets(sol_amount):
