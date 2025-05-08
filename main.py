@@ -6,6 +6,7 @@ from telegram import Bot
 from solana.rpc.async_api import AsyncClient
 from solders.pubkey import Pubkey
 from dotenv import load_dotenv
+from solana.rpc.types import TokenAccountsFilter
 
 load_dotenv()
 
@@ -36,10 +37,10 @@ async def get_wallet_balance():
         wallet = Pubkey.from_string(MONITORED_WALLET)
 
         resp = await client.get_token_accounts_by_owner(
-            wallet,
-            mint=Pubkey.from_string(WSOL_MINT),
-            encoding="jsonParsed"
-        )
+    wallet,
+    TokenAccountsFilter(mint=Pubkey.from_string(WSOL_MINT)),
+    encoding="jsonParsed"
+    )
 
         sol_total = 0.0
         for token_acc in resp.value:
