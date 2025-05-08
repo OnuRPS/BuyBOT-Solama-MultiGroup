@@ -4,13 +4,13 @@ import aiohttp
 import json
 from telegram import Bot
 from solana.rpc.async_api import AsyncClient
-from solana.publickey import PublicKey
+from solders.pubkey import Pubkey
 from dotenv import load_dotenv
 
 load_dotenv()
 
 SOLANA_RPC = "https://rpc.helius.xyz/?api-key=4db5289f-5c8e-4e55-8478-dd1e73ee2eee"
-MONITORED_WALLET = "D6FDaJjvRwBSm54rBP7ViRbF7KQxzpNw35TFWNWwpsbB"
+MONITORED_WALLET = "Gdor8k1ubPEp5UyPm5Y1WnEfSqbHD7mXQgZYswTTUQUw"
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_IDS = os.getenv("CHAT_IDS", "").split(",")
 GIF_URL = os.getenv("GIF_URL")
@@ -33,12 +33,10 @@ async def get_sol_price():
 async def get_wallet_balance():
     try:
         client = AsyncClient(SOLANA_RPC)
-        wallet = PublicKey(MONITORED_WALLET)
+        wallet = Pubkey.from_string(MONITORED_WALLET)
+        program_id = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
-        resp = await client.get_token_accounts_by_owner(
-            wallet,
-            PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-        )
+        resp = await client.get_token_accounts_by_owner(wallet, program_id)
 
         sol_total = 0.0
         for token_acc in resp.value:
@@ -80,7 +78,7 @@ def test_telegram_message():
 async def check_transactions():
     global last_sig, initial_run
     client = AsyncClient(SOLANA_RPC)
-    pubkey = PublicKey(MONITORED_WALLET)
+    pubkey = Pubkey.from_string(MONITORED_WALLET)
     print("🟢 Solana BuyDetector™ activated.")
 
     while True:
