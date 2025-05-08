@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SOLANA_RPC = "https://rpc.helius.xyz/?api-key=4db5289f-5c8e-4e55-8478-dd1e73ee2eee"
-MONITORED_WALLET = "Gdor8k1ubPEp5UyPm5Y1WnEfSqbHD7mXQgZYswTTUQUw"
+MONITORED_WALLET = "D6FDaJjvRwBSm54rBP7ViRbF7KQxzpNw35TFWNWwpsbB"
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_IDS = os.getenv("CHAT_IDS", "").split(",")
 GIF_URL = os.getenv("GIF_URL")
