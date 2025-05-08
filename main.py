@@ -43,7 +43,7 @@ async def get_wallet_balance():
 
         sol_total = 0.0
         for token_acc in resp.value:
-            amount = token_acc.account.data.parsed["info"]["tokenAmount"]["uiAmount"]
+            amount = float(token_acc.account.data.parsed['info']['tokenAmount']['amount']) / 1e9
             sol_total += amount
 
         await client.close()
