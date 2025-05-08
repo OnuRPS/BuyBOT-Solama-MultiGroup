@@ -4,7 +4,7 @@ import aiohttp
 import json
 from telegram import Bot
 from solana.rpc.async_api import AsyncClient
-from solders.pubkey import Pubkey
+from solana.publickey import PublicKey
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,17 +33,20 @@ async def get_sol_price():
 async def get_wallet_balance():
     try:
         client = AsyncClient(SOLANA_RPC)
-        wallet = Pubkey.from_string(MONITORED_WALLET)
+        wallet = PublicKey(MONITORED_WALLET)
+
         resp = await client.get_token_accounts_by_owner(
             wallet,
-            Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+            PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
         )
+
         sol_total = 0.0
         for token_acc in resp.value:
             info = token_acc.account.data.parsed["info"]
             if info["mint"] == WSOL_MINT:
                 amount = float(info["tokenAmount"]["amount"]) / 1e9
                 sol_total += amount
+
         await client.close()
         return sol_total
     except Exception as e:
@@ -77,7 +80,7 @@ def test_telegram_message():
 async def check_transactions():
     global last_sig, initial_run
     client = AsyncClient(SOLANA_RPC)
-    pubkey = Pubkey.from_string(MONITORED_WALLET)
+    pubkey = PublicKey(MONITORED_WALLET)
     print("🟢 Solana BuyDetector™ activated.")
 
     while True:
