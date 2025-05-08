@@ -16,6 +16,9 @@ CHAT_IDS = os.getenv("CHAT_IDS", "").split(",")
 GIF_URL = os.getenv("GIF_URL")
 WSOL_MINT = "So11111111111111111111111111111111111111112"
 
+SOFTCAP_SOL = 72.9
+SOFTCAP_USD = 11700
+
 bot = Bot(token=TELEGRAM_TOKEN)
 last_sig = None
 initial_run = True
@@ -26,6 +29,16 @@ async def get_sol_price():
             async with session.get("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd") as r:
                 data = await r.json()
                 return float(data["solana"]["usd"])
+    except:
+        return 0.0
+
+async def get_wallet_balance():
+    try:
+        client = AsyncClient(SOLANA_RPC)
+        resp = await client.get_balance(Pubkey.from_string(MONITORED_WALLET))
+        sol = resp.value / 1e9
+        await client.close()
+        return sol
     except:
         return 0.0
 
@@ -130,16 +143,28 @@ async def check_transactions():
                     sol_price = await get_sol_price()
                     usd_value = sol_amount * sol_price
                     bullets = generate_bullets(sol_amount)
+                    wallet_balance = await get_wallet_balance()
+                    wallet_usd = wallet_balance * sol_price
+
+                    emoji = "💸" if usd_value < 10 else "🚀" if usd_value < 100 else "🔥"
+                    softcap_status = f"🔴 *SoftCap:* {SOFTCAP_SOL} SOL (~${SOFTCAP_USD:,.0f})"
+                    if wallet_balance >= SOFTCAP_SOL:
+                        softcap_status += "\n🥳 ✅ *SoftCap Passed!*"
 
                     msg_text = (
-                        f"🪙 *New $BabyGOV contribution detected!*\n\n"
+                        f"{emoji} *New $BabyGOV contribution detected!*\n\n"
                         f"🔁 *From:* `{from_addr}`\n"
                         f"📥 *To:* `{to_addr}`\n"
-                        f"🟨 *Amount:*\n"
+                        f"🟨 *Amount Received:*\n"
                         f"┌────────────────────────────┐\n"
                         f"│  {sol_amount:.4f} SOL (~${usd_value:,.2f})  │\n"
                         f"└────────────────────────────┘\n"
                         f"{bullets}\n\n"
+                        f"💼 *Raised:*\n"
+                        f"┌────────────────────────────┐\n"
+                        f"│  {wallet_balance:.4f} SOL (~${wallet_usd:,.2f})  │\n"
+                        f"└────────────────────────────┘\n\n"
+                        f"{softcap_status}\n\n"
                         f"🔗 [View on Solscan](https://solscan.io/tx/{sig})\n\n"
                         f"───────────────\n"
                         f"🤖 *BuyDetector™ Solana*\n"
