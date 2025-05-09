@@ -71,25 +71,25 @@ def generate_bullets(sol_amount):
     bullets_count = int(sol_amount / 0.1)
     return '🥇' * min(bullets_count, 100)
 
-async def send_telegram_message(text, gif_url=None):
+def send_telegram_message(text, gif_url=None):
     for chat_id in CHAT_IDS:
         try:
             if gif_url:
-                await bot.send_animation(chat_id=chat_id.strip(), animation=gif_url, caption=text, parse_mode="Markdown")
+                bot.send_animation(chat_id=chat_id.strip(), animation=gif_url, caption=text, parse_mode="Markdown")
             else:
-                await bot.send_message(chat_id=chat_id.strip(), text=text, parse_mode="Markdown")
+                bot.send_message(chat_id=chat_id.strip(), text=text, parse_mode="Markdown")
             print(f"✅ Message sent to chat {chat_id}")
         except Exception as e:
             print(f"❌ Failed to send message to {chat_id}: {e}")
 
-async def test_telegram_message():
+def test_telegram_message():
     print("[TEST] Sending test message to Telegram...")
     text = (
         "✅ Bot started and connected successfully!\n\n"
         "🟢 Solana BuyDetector™ is live.\n"
         "🔍 Waiting for first transaction..."
     )
-    await send_telegram_message(text, gif_url=GIF_URL)
+    send_telegram_message(text, gif_url=GIF_URL)
 
 async def check_transactions():
     global last_sig, initial_run
@@ -185,10 +185,11 @@ async def check_transactions():
                         f"🔗 [View on Solscan](https://solscan.io/tx/{sig})\n\n"
                         f"───────────────\n"
                         f"🤖 *BuyDetector™ Solana*\n"
+                        f"🤖 *[Buy From Here](https://www.pinksale.finance/solana/launchpad/D6FDaJjvRwBSm54rBP7ViRbF7KQxzpNw35TFWNWwpsbB)*\n"
                         f"🔧 by [ReactLAB](https://t.me/PandaBaoOfficial)"
                     )
 
-                    await send_telegram_message(msg_text, gif_url=GIF_URL)
+                    send_telegram_message(msg_text, gif_url=GIF_URL)
                     print(f"📬 TX posted: {sig}")
                     last_sig = sig
                 else:
@@ -200,7 +201,7 @@ async def check_transactions():
         await asyncio.sleep(10)
 
 async def main():
-    await test_telegram_message()
+    test_telegram_message()
     await check_transactions()
 
 if __name__ == "__main__":
