@@ -185,7 +185,7 @@ async def check_transactions():
                         f"🔗 [View on Solscan](https://solscan.io/tx/{sig})\n\n"
                         f"───────────────\n"
                         f"🤖 *BuyDetector™ Solana*\n"
-                        f"🤖 *[Buy From Here](https://www.pinksale.finance/solana/launchpad/D6FDaJjvRwBSm54rBP7ViRbF7KQxzpNw35TFWNWwpsbB)*\n"
+                        f"🤖 [Buy BabyGOV](https://www.pinksale.finance/solana/launchpad/D6FDaJjvRwBSm54rBP7ViRbF7KQxzpNw35TFWNWwpsbB)\n"
                         f"🔧 by [ReactLAB](https://t.me/PandaBaoOfficial)"
                     )
 
