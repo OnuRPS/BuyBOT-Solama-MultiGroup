@@ -32,7 +32,7 @@ async def get_sol_price():
 
 async def get_wallet_balance():
     try:
-        print("🔍 Sending raw JSON-RPC request to fetch WSOL accounts...")
+        print("\U0001F50D Sending raw JSON-RPC request to fetch WSOL accounts...")
         headers = {"Content-Type": "application/json"}
         payload = {
             "jsonrpc": "2.0",
@@ -49,7 +49,7 @@ async def get_wallet_balance():
                 data = await resp.json()
 
         accounts = data["result"]["value"]
-        print(f"📦 Found {len(accounts)} WSOL token accounts.")
+        print(f"\U0001F4E6 Found {len(accounts)} WSOL token accounts.")
 
         sol_total = 0.0
         for acc in accounts:
@@ -159,35 +159,37 @@ async def check_transactions():
 
                     emoji = "💸" if usd_value < 10 else "🚀" if usd_value < 100 else "🔥"
 
-                    progress_pct = min(wallet_balance / SOFTCAP_SOL * 100, 100)
+                    progress_pct = wallet_balance / SOFTCAP_SOL * 100
                     filled = int(progress_pct // 5)
-                    progress_bar = f"[{'█' * filled}{'░' * (20 - filled)}] {progress_pct:.1f}%"
+                    progress_bar = f"{'█' * filled} {progress_pct:.1f}%"
 
-                    softcap_status = f"🔴 *SoftCap:* {SOFTCAP_SOL} SOL"
+                    softcap_status = f"🔴 SoftCap: {SOFTCAP_SOL} SOL"
                     if wallet_balance >= SOFTCAP_SOL:
-                        softcap_status += "\n🥳 ✅ *SoftCap Passed!*"
+                        softcap_status += "\n🥳 ✅ SoftCap Passed!"
 
                     msg_text = (
-                        f"{emoji} *New $BabyGOV contribution detected!*\n\n"
-                        f"🔁 *From:* `{from_addr}`\n"
-                        f"📥 *To:* `{to_addr}`\n"
-                        f"🟨 *Amount Received:*\n"
+                        f"```\n"
+                        f"{emoji} New $BabyGOV contribution detected!\n\n"
+                        f"🔁 From: {from_addr}\n"
+                        f"📥 To: {to_addr}\n"
+                        f"🟨 Amount Received:\n"
                         f"┌────────────────────────────┐\n"
                         f"│  {sol_amount:.4f} SOL (~${usd_value:,.2f})  │\n"
                         f"└────────────────────────────┘\n"
                         f"{bullets}\n\n"
-                        f"💼 *Raised:*\n"
+                        f"💼 Raised:\n"
                         f"┌────────────────────────────┐\n"
                         f"│  {wallet_balance:.4f} SOL (~${wallet_usd:,.2f})  │\n"
                         f"└────────────────────────────┘\n\n"
                         f"{softcap_status}\n"
-                        f"📊 *Progress:*\n{progress_bar}\n\n"
-                        f"🔗 [View on Solscan](https://solscan.io/tx/{sig})\n\n"
+                        f"📊 Progress:\n{progress_bar}\n\n"
+                        f"🔗 View on Solscan:\nhttps://solscan.io/tx/{sig}\n\n"
                         f"───────────────\n"
-                        f"🤖 [Buy BabyGOV](https://www.pinksale.finance/solana/launchpad/D6FDaJjvRwBSm54rBP7ViRbF7KQxzpNw35TFWNWwpsbB)\n"
+                        f"🤖 Buy BabyGOV:\nhttps://www.pinksale.finance/solana/launchpad/{MONITORED_WALLET}\n"
                         f"───────────────\n"
-                        f"🤖 *BuyDetector™ Solana*\n"
-                        f"🔧 by [ReactLAB](https://t.me/PandaBaoOfficial)"
+                        f"🤖 BuyDetector™ Solana\n"
+                        f"🔧 by ReactLAB: https://t.me/PandaBaoOfficial\n"
+                        f"```"
                     )
 
                     send_telegram_message(msg_text, gif_url=GIF_URL)
