@@ -15,8 +15,8 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_IDS = os.getenv("CHAT_IDS", "").split(",")
 GIF_URL = os.getenv("GIF_URL")
 WSOL_MINT = "So11111111111111111111111111111111111111112"
+SOFTCAP_SOL = 50
 
-SOFTCAP_SOL = 50  # actualizat
 bot = Bot(token=TELEGRAM_TOKEN)
 last_sig = None
 initial_run = True
@@ -31,31 +31,65 @@ async def get_sol_price():
         return 0.0
 
 async def get_wallet_balance():
-    return 0.0  # disabled because we removed the raised section
+    try:
+        print("🔍 Sending raw JSON-RPC request to fetch WSOL accounts...")
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "getTokenAccountsByOwner",
+            "params": [
+                MONITORED_WALLET,
+                {"mint": WSOL_MINT},
+                {"encoding": "jsonParsed"}
+            ]
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.post(SOLANA_RPC, headers=headers, json=payload) as resp:
+                data = await resp.json()
+
+        accounts = data["result"]["value"]
+        print(f"📦 Found {len(accounts)} WSOL token accounts.")
+
+        sol_total = 0.0
+        for acc in accounts:
+            try:
+                amount = acc["account"]["data"]["parsed"]["info"]["tokenAmount"]["uiAmount"]
+                print(f"✅ WSOL account: {amount}")
+                sol_total += amount
+            except Exception as e:
+                print(f"⚠️ Failed to parse account: {e}")
+
+        print(f"💰 Final WSOL total: {sol_total}")
+        return sol_total
+
+    except Exception as e:
+        print(f"❌ JSON-RPC WSOL fetch failed: {e}")
+        return 0.0
 
 def generate_bullets(sol_amount):
     bullets_count = int(sol_amount / 0.1)
     return '🥇' * min(bullets_count, 100)
 
-def send_telegram_message(text, gif_url=None):
+async def send_telegram_message(text, gif_url=None):
     for chat_id in CHAT_IDS:
         try:
             if gif_url:
-                bot.send_animation(chat_id=chat_id.strip(), animation=gif_url, caption=text, parse_mode="Markdown")
+                await bot.send_animation(chat_id=chat_id.strip(), animation=gif_url, caption=text, parse_mode="Markdown")
             else:
-                bot.send_message(chat_id=chat_id.strip(), text=text, parse_mode="Markdown")
+                await bot.send_message(chat_id=chat_id.strip(), text=text, parse_mode="Markdown")
             print(f"✅ Message sent to chat {chat_id}")
         except Exception as e:
             print(f"❌ Failed to send message to {chat_id}: {e}")
 
-def test_telegram_message():
-    print("🧪 Sending test message to Telegram...")
+async def test_telegram_message():
+    print("[TEST] Sending test message to Telegram...")
     text = (
         "✅ Bot started and connected successfully!\n\n"
         "🟢 Solana BuyDetector™ is live.\n"
         "🔍 Waiting for first transaction..."
     )
-    send_telegram_message(text, gif_url=GIF_URL)
+    await send_telegram_message(text, gif_url=GIF_URL)
 
 async def check_transactions():
     global last_sig, initial_run
@@ -105,20 +139,6 @@ async def check_transactions():
                         break
 
                 if sol_amount == 0:
-                    for instr in instructions:
-                        if instr.get("program") == "system":
-                            parsed = instr.get("parsed", {})
-                            if parsed.get("type") == "transfer":
-                                info = parsed.get("info", {})
-                                if info.get("destination") == MONITORED_WALLET:
-                                    lamports = int(info.get("lamports", 0))
-                                    sol_amount = lamports / 1e9
-                                    from_addr = info.get("source", "Unknown")
-                                    to_addr = info.get("destination", MONITORED_WALLET)
-                                    print(f"✅ SOL transfer detected: {sol_amount} SOL")
-                                    break
-
-                if sol_amount == 0:
                     for b in meta.get("postTokenBalances", []):
                         if b.get("owner") == MONITORED_WALLET and b.get("mint") == WSOL_MINT:
                             pre_amt = next((x for x in meta.get("preTokenBalances", []) if x.get("accountIndex") == b.get("accountIndex")), {})
@@ -134,9 +154,18 @@ async def check_transactions():
                     sol_price = await get_sol_price()
                     usd_value = sol_amount * sol_price
                     bullets = generate_bullets(sol_amount)
+                    wallet_balance = await get_wallet_balance()
+                    wallet_usd = wallet_balance * sol_price
 
                     emoji = "💸" if usd_value < 10 else "🚀" if usd_value < 100 else "🔥"
-                    progress_bar = ""
+
+                    progress_pct = min(wallet_balance / SOFTCAP_SOL * 100, 100)
+                    filled = int(progress_pct // 5)
+                    progress_bar = f"[{'█' * filled}{'░' * (20 - filled)}] {progress_pct:.1f}%"
+
+                    softcap_status = f"🔴 *SoftCap:* {SOFTCAP_SOL} SOL"
+                    if wallet_balance >= SOFTCAP_SOL:
+                        softcap_status += "\n🥳 ✅ *SoftCap Passed!*"
 
                     msg_text = (
                         f"{emoji} *New $BabyGOV contribution detected!*\n\n"
@@ -147,13 +176,19 @@ async def check_transactions():
                         f"│  {sol_amount:.4f} SOL (~${usd_value:,.2f})  │\n"
                         f"└────────────────────────────┘\n"
                         f"{bullets}\n\n"
+                        f"💼 *Raised:*\n"
+                        f"┌────────────────────────────┐\n"
+                        f"│  {wallet_balance:.4f} SOL (~${wallet_usd:,.2f})  │\n"
+                        f"└────────────────────────────┘\n\n"
+                        f"{softcap_status}\n"
+                        f"📊 *Progress:*\n{progress_bar}\n\n"
                         f"🔗 [View on Solscan](https://solscan.io/tx/{sig})\n\n"
                         f"───────────────\n"
                         f"🤖 *BuyDetector™ Solana*\n"
                         f"🔧 by [ReactLAB](https://t.me/PandaBaoOfficial)"
                     )
 
-                    send_telegram_message(msg_text, gif_url=GIF_URL)
+                    await send_telegram_message(msg_text, gif_url=GIF_URL)
                     print(f"📬 TX posted: {sig}")
                     last_sig = sig
                 else:
@@ -164,6 +199,9 @@ async def check_transactions():
 
         await asyncio.sleep(10)
 
+async def main():
+    await test_telegram_message()
+    await check_transactions()
+
 if __name__ == "__main__":
-    test_telegram_message()
-    asyncio.run(check_transactions())
+    asyncio.run(main())
