@@ -71,6 +71,15 @@ def generate_bullets(sol_amount):
     bullets_count = int(sol_amount / 0.1)
     return '🥇' * min(bullets_count, 100)
 
+def generate_progress_bar(progress_pct):
+    blocks = ["░", "▒", "▓", "█"]
+    full_blocks = int(progress_pct // 5)
+    remainder = int(((progress_pct % 5) / 5) * len(blocks))
+    bar = "█" * full_blocks
+    if remainder > 0:
+        bar += blocks[remainder - 1]
+    return f"{bar} {progress_pct:.1f}%"
+
 def send_telegram_message(text, gif_url=None):
     for chat_id in CHAT_IDS:
         try:
@@ -160,8 +169,7 @@ async def check_transactions():
                     emoji = "💸" if usd_value < 10 else "🚀" if usd_value < 100 else "🔥"
 
                     progress_pct = wallet_balance / SOFTCAP_SOL * 100
-                    filled = int(progress_pct // 5)
-                    progress_bar = f"{'█' * filled} {progress_pct:.1f}%"
+                    progress_bar = generate_progress_bar(progress_pct)
 
                     softcap_status = f"🔴 *SoftCap:* {SOFTCAP_SOL} SOL"
                     if wallet_balance >= SOFTCAP_SOL:
@@ -172,12 +180,16 @@ async def check_transactions():
                         f"🔁 *From:* `{from_addr}`\n"
                         f"📥 *To:* `{to_addr}`\n"
                         f"🟨 *Amount Received:*\n"
-                        f"`  {sol_amount:.4f} SOL (~${usd_value:,.2f})  `\n"
+                        f"┌────────────────────────────┐\n"
+                        f"│  {sol_amount:.4f} SOL (~${usd_value:,.2f})  │\n"
+                        f"└────────────────────────────┘\n"
                         f"{bullets}\n\n"
                         f"💼 *Raised:*\n"
-                        f"`  {wallet_balance:.4f} SOL (~${wallet_usd:,.2f})  `\n\n"
+                        f"┌────────────────────────────┐\n"
+                        f"│  {wallet_balance:.4f} SOL (~${wallet_usd:,.2f})  │\n"
+                        f"└────────────────────────────┘\n\n"
                         f"{softcap_status}\n"
-                        f"📊 *Progress:*\n`{progress_bar}`\n\n"
+                        f"📊 *Progress:*\n{progress_bar}\n\n"
                         f"🔗 [View on Solscan](https://solscan.io/tx/{sig})\n"
                         f"───────────────\n"
                         f"🤖 [Buy BabyGOV](https://www.pinksale.finance/solana/launchpad/{MONITORED_WALLET})\n"
