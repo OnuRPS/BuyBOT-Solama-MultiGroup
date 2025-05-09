@@ -182,14 +182,14 @@ async def check_transactions():
                         f"│  {wallet_balance:.4f} SOL (~${wallet_usd:,.2f})  │\n"
                         f"└────────────────────────────┘\n\n"
                         f"{softcap_status}\n"
-                        f"📊 Progress:\n{progress_bar}\n\n"
-                        f"🔗 View on Solscan:\nhttps://solscan.io/tx/{sig}\n\n"
+                        f"📊 Progress:\n{progress_bar}\n"
+                        f"```\n"
+                        f"🔗 [View on Solscan](https://solscan.io/tx/{sig})\n\n"
                         f"───────────────\n"
-                        f"🤖 Buy BabyGOV:\nhttps://www.pinksale.finance/solana/launchpad/{MONITORED_WALLET}\n"
+                        f"🤖 [Buy BabyGOV](https://www.pinksale.finance/solana/launchpad/{MONITORED_WALLET})\n"
                         f"───────────────\n"
                         f"🤖 BuyDetector™ Solana\n"
-                        f"🔧 by ReactLAB: https://t.me/PandaBaoOfficial\n"
-                        f"```"
+                        f"🔧 by [ReactLAB](https://t.me/PandaBaoOfficial)"
                     )
 
                     send_telegram_message(msg_text, gif_url=GIF_URL)
